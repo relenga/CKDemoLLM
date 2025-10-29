@@ -1,0 +1,25 @@
+# Core FastAPI dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-dotenv==1.0.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# LangGraph and LangChain dependencies (compatible versions)
+langgraph==0.2.0
+langchain-core>=0.2.27,<0.3.0
+langchain>=0.2.0,<0.3.0
+langchain-openai>=0.1.0,<0.2.0
+
+# HTTP and utility dependencies
+httpx==0.25.2
+python-multipart==0.0.6
+requests==2.31.0
+
+# Authentication dependencies (optional)
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Testing dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
