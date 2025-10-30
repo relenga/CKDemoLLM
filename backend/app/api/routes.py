@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import router as graph_router
+from app.api.endpoints import router as endpoints_router
 
 api_router = APIRouter()
-api_router.include_router(graph_router, tags=["graph"])
+api_router.include_router(endpoints_router, tags=["api"])

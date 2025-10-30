@@ -19,6 +19,18 @@ export interface GraphProcessResponse {
   };
 }
 
+export interface BuylistUploadRequest {
+  url?: string;
+}
+
+export interface BuylistUploadResponse {
+  status: string;
+  message: string;
+  total_records: number;
+  processing_time?: number;
+  summary?: any;
+}
+
 export const graphService = {
   processInput: async (request: GraphProcessRequest): Promise<GraphProcessResponse> => {
     const response = await apiClient.post('/api/graph/process', request);
@@ -32,6 +44,13 @@ export const graphService = {
 
   getGraphInfo: async (): Promise<any> => {
     const response = await apiClient.get('/api/graph/info');
+    return response.data;
+  },
+};
+
+export const buylistService = {
+  uploadBuylist: async (request: BuylistUploadRequest = {}): Promise<BuylistUploadResponse> => {
+    const response = await apiClient.post('/api/buylist/upload', request);
     return response.data;
   },
 };

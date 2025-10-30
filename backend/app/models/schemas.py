@@ -23,3 +23,13 @@ class GraphInfoResponse(BaseModel):
     edges: int
     graph_type: str
     description: str
+
+class BuylistUploadRequest(BaseModel):
+    url: Optional[str] = "https://www.cardkingdom.com/json/buylist.jsonp"
+
+class BuylistUploadResponse(BaseModel):
+    status: str
+    message: str
+    total_records: int
+    processing_time: Optional[float] = None
+    summary: Optional[Dict[str, Any]] = None

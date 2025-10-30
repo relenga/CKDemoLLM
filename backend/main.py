@@ -40,6 +40,16 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+@app.get("/direct-test")
+async def direct_test():
+    """Direct test endpoint added to main.py"""
+    return {"message": "Direct endpoint works!", "routes_count": len(app.routes)}
+
+@app.get("/api/direct-buylist-test")
+async def direct_buylist_test():
+    """Direct buylist test bypassing router"""
+    return {"message": "Direct buylist test works!", "status": "ok"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

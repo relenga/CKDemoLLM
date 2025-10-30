@@ -47,14 +47,16 @@ const HomePage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h5" component="h2" gutterBottom>
-                API Integration
+                Card Kingdom Buylist
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Seamless integration with Python backend API for data processing and AI operations.
+                Load and process Card Kingdom buylist data with 1.4M+ records. Transforms JSONP format and provides data analysis.
               </Typography>
             </CardContent>
             <CardActions>
-              <Button size="small">Learn More</Button>
+              <Button size="small" onClick={() => navigate('/buylist')}>
+                Process Buylist
+              </Button>
             </CardActions>
           </Card>
         </Grid>

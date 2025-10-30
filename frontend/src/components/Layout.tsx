@@ -20,6 +20,7 @@ import {
   Menu as MenuIcon,
   Home as HomeIcon,
   AccountTree as GraphIcon,
+  CloudUpload as BuylistIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -37,6 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { text: 'Home', icon: <HomeIcon />, path: '/' },
     { text: 'Graph', icon: <GraphIcon />, path: '/graph' },
+    { text: 'CK Buylist', icon: <BuylistIcon />, path: '/buylist' },
   ];
 
   const handleDrawerToggle = () => {

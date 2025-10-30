@@ -4,6 +4,7 @@ import { Box } from '@mui/material';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import GraphPage from './pages/GraphPage';
+import BuylistPage from './pages/BuylistPage';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/graph" element={<GraphPage />} />
+          <Route path="/buylist" element={<BuylistPage />} />
         </Routes>
       </Layout>
     </Box>
