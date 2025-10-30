@@ -1,0 +1,15 @@
+### Test Health Check First
+GET http://localhost:8002/health
+
+### Test Root Endpoint
+GET http://localhost:8002/
+
+### Test CK Buylist Upload API (This might take 30+ seconds)
+POST http://localhost:8002/api/buylist/upload
+Content-Type: application/json
+
+### Test Buylist Stats After Upload
+GET http://localhost:8002/api/buylist/stats
+
+### Test Buylist Sample After Upload
+GET http://localhost:8002/api/buylist/sample?records=5

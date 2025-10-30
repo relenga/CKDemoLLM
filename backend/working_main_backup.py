@@ -11,9 +11,6 @@ import aiohttp
 import json
 from typing import Dict, List, Any
 
-# Import core functions for buylist processing
-from buylist_core import clean_jsonp_wrapper, transform_record, COLUMN_MAPPING, process_buylist_data
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,7 +22,7 @@ app = FastAPI(
     description="A FastAPI backend for processing Card Kingdom buylist data with LangGraph integration."
 )
 
-# CORS middleware
+# Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -33,6 +30,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Basic endpoints
+@app.get("/")
+async def root():
+    return {
+        "message": "CK LangGraph Backend API",
+        "version": "1.0.0",
+        "status": "running"
+    }
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+@app.get("/api/test")
+async def test_endpoint():
+    return {"message": "Test endpoint is working!", "status": "ok"}
+
+# Buylist endpoints (simplified versions)
+@app.get("/api/buylist/test")
+async def test_buylist_endpoint():
+    return {"message": "Buylist endpoint is registered!", "status": "ok"}
 
 # Constants
 CARD_KINGDOM_BUYLIST_URL = "https://www.cardkingdom.com/json/buylist.jsonp"
@@ -78,18 +97,20 @@ def clean_jsonp_wrapper(raw_data: str) -> str:
     """Clean JSONP wrapper from Card Kingdom response."""
     stripped_data = raw_data.strip()
     
+    logger.debug(f"Checking for JSONP wrapper in data: {stripped_data[:50]}...{stripped_data[-50:]}")
+    
     if stripped_data.startswith('ckCardList(') and stripped_data.endswith(');'):
         # Remove ckCardList( from start and ); from end
         json_data = stripped_data[11:-2]
-        logger.info("JSONP wrapper 'ckCardList();' detected and cleaned")
+        logger.info("✅ JSONP wrapper 'ckCardList();' detected and cleaned")
         return json_data
     elif stripped_data.startswith('(') and stripped_data.endswith(')'):
         # Generic JSONP wrapper
         json_data = stripped_data[1:-1]
-        logger.info("Generic JSONP wrapper detected and cleaned")
+        logger.info("✅ Generic JSONP wrapper detected and cleaned")
         return json_data
     else:
-        logger.warning("No JSONP wrapper found, using raw data")
+        logger.warning("❌ No JSONP wrapper found, using raw data")
         return stripped_data
 
 
@@ -100,32 +121,6 @@ def transform_record(record: Dict[str, Any]) -> Dict[str, Any]:
         if old_key in record:
             transformed_record[new_key] = record[old_key]
     return transformed_record
-
-
-# Basic endpoints
-@app.get("/")
-async def root():
-    return {
-        "message": "CK LangGraph Backend API",
-        "version": "1.0.0",
-        "status": "running"
-    }
-
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
-
-@app.get("/api/test")
-async def test_endpoint():
-    return {"message": "Test endpoint is working!", "status": "ok"}
-
-
-# Buylist endpoints
-@app.get("/api/buylist/test")
-async def test_buylist_endpoint():
-    return {"message": "Buylist endpoint is registered!", "status": "ok"}
 
 
 @app.post("/api/buylist/upload")
@@ -178,7 +173,6 @@ async def upload_buylist():
             "total_records": 0,
             "processing_time": round(processing_time, 2)
         }
-
 
 if __name__ == "__main__":
     import uvicorn
