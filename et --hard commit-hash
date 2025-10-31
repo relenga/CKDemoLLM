@@ -1,0 +1,36 @@
+[33mcommit a9d7b24843069e73ffcc5945adb0f03c4b8ed5d1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Robin Elenga <robin.elenga@gmail.com>
+Date:   Thu Oct 30 17:23:05 2025 -0700
+
+    Vendor SellList Upload working
+
+[33mcommit e381d9e47f187ffe7ca05f10775b2196dd5c0cc7[m
+Author: Robin Elenga <robin.elenga@gmail.com>
+Date:   Thu Oct 30 12:13:14 2025 -0700
+
+    json upload to dataframe working.
+
+[33mcommit 59b1a44406a0408e7df18dea31d8576c4b95a9f1[m
+Author: Robin Elenga <robin.elenga@gmail.com>
+Date:   Thu Oct 30 08:31:06 2025 -0700
+
+    File Uploads Working - Basic starting
+
+[33mcommit a7f19ac1c496a3d29a7f281599ec74071408233c[m
+Merge: 0539c44 093d337
+Author: Robin Elenga <robin.elenga@gmail.com>
+Date:   Wed Oct 29 16:06:41 2025 -0700
+
+    Merge remote .gitignore with local project files
+
+[33mcommit 0539c44bffb17a29e4ca4d71f0f44ac6da1b4579[m
+Author: Robin Elenga <robin.elenga@gmail.com>
+Date:   Wed Oct 29 16:02:41 2025 -0700
+
+    Initial commit: React + Material-UI frontend with Python + LangGraph backend
+
+[33mcommit 093d33700147ab9bb63c129e6658c8f20a01813d[m
+Author: Robin Elenga <93346241+relenga@users.noreply.github.com>
+Date:   Wed Oct 29 16:01:59 2025 -0700
+
+    Initial commit
