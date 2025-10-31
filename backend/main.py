@@ -3,24 +3,55 @@ CK LangGraph Backend API
 A FastAPI backend for processing Card Kingdom buylist data.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import time
 import aiohttp
 import json
+import asyncio
+import psutil
+import os
+import numpy as np
+import pandas as pd
 from typing import Dict, List, Any
 
-# Import core functions for buylist processing
-from buylist_core import (
+def clean_for_json(obj):
+    """Recursively clean data structure for JSON serialization."""
+    if isinstance(obj, dict):
+        return {key: clean_for_json(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_for_json(item) for item in obj]
+    elif isinstance(obj, (np.integer, int)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, float)):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return float(obj)
+    elif pd.isna(obj):
+        return None
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        return obj
+
+# Import core functions for buylist and selllist processing
+from fileUpload_core import (
     clean_jsonp_wrapper, 
     transform_record, 
-    COLUMN_MAPPING, 
+    COLUMN_MAPPING,
+    CSV_COLUMN_MAPPING,
     process_buylist_data,
     get_buylist_dataframe,
     get_buylist_stats,
     clear_buylist_dataframe,
-    get_buylist_sample
+    get_buylist_sample,
+    process_selllist_csv,
+    process_selllist_file,
+    get_selllist_dataframe,
+    get_selllist_stats,
+    clear_selllist_dataframe,
+    get_selllist_sample
 )
 
 # Configure logging
@@ -133,10 +164,6 @@ async def upload_buylist():
         
         # Process using core function (run in thread pool to avoid blocking)
         try:
-            import asyncio
-            import psutil
-            import os
-            
             # Log memory before processing
             process = psutil.Process(os.getpid())
             memory_before = process.memory_info().rss / 1024 / 1024  # MB
@@ -219,7 +246,7 @@ async def upload_buylist():
 @app.get("/api/buylist/sample")
 async def get_buylist_sample_endpoint(records: int = 5):
     """Get a sample of records from the buylist dataframe."""
-    from buylist_core import get_buylist_sample
+    from fileUpload_core import get_buylist_sample
     
     try:
         if records < 1 or records > 100:
@@ -231,6 +258,178 @@ async def get_buylist_sample_endpoint(records: int = 5):
     except Exception as e:
         logger.error(f"Error getting buylist sample: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting sample: {str(e)}")
+
+
+# ============================================================================
+# SELLLIST ENDPOINTS (CSV Processing)
+# ============================================================================
+
+@app.post("/api/selllist/upload")
+async def upload_selllist(file: UploadFile = File(...)):
+    """Upload and process CSV selllist data."""
+    start_time = time.time()
+    
+    try:
+        # Validate file type
+        if not file.filename:
+            raise HTTPException(
+                status_code=400,
+                detail="File name is required"
+            )
+        
+        file_ext = file.filename.lower().split('.')[-1]
+        if file_ext not in ['csv', 'xlsx', 'xls']:
+            raise HTTPException(
+                status_code=400,
+                detail="Only CSV and XLSX files are supported"
+            )
+        
+        # Log file info
+        logger.info(f"📁 Processing uploaded file: {file.filename}")
+        logger.info(f"📄 Content type: {file.content_type}")
+        
+        # Read file content (keep as bytes for both CSV and Excel)
+        file_content = await file.read()
+        
+        if not file_content:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{file_ext.upper()} file is empty"
+            )
+        
+        # Log memory before processing
+        process = psutil.Process(os.getpid())
+        memory_before = process.memory_info().rss / 1024 / 1024  # MB
+        logger.info(f"Memory before processing: {memory_before:.1f} MB")
+        logger.info(f"{file_ext.upper()} size to process: {len(file_content):,} bytes")
+        
+        # Process file using core function (run in thread pool to avoid blocking)
+        try:
+            process_start = time.time()
+            
+            # 60 second timeout for processing
+            filtered_df, original_count, filtered_count = await asyncio.wait_for(
+                asyncio.get_running_loop().run_in_executor(None, process_selllist_file, file_content, file.filename, True),
+                timeout=60.0
+            )
+            
+            process_time = time.time() - process_start
+            memory_after = process.memory_info().rss / 1024 / 1024  # MB
+            logger.info(f"Processing completed in {process_time:.2f}s")
+            logger.info(f"Memory after processing: {memory_after:.1f} MB")
+            logger.info(f"Memory increase: {memory_after - memory_before:.1f} MB")
+            
+        except asyncio.TimeoutError:
+            logger.error(f"{file_ext.upper()} processing timed out after 60 seconds")
+            raise HTTPException(
+                status_code=504,
+                detail=f"{file_ext.upper()} processing timed out - file too large"
+            )
+        except ValueError as e:
+            logger.error(f"{file_ext.upper()} processing failed: {e}")
+            raise HTTPException(
+                status_code=400,
+                detail=str(e)
+            )
+        
+        # Get sample records (first 5) - handle NaN values for JSON serialization
+        sample_size = min(5, len(filtered_df))
+        if not filtered_df.empty:
+            # Replace NaN/infinite values with None for JSON compatibility
+            sample_df = filtered_df.head(sample_size).copy()
+            sample_df = sample_df.replace([np.inf, -np.inf], None)
+            sample_df = sample_df.where(sample_df.notna(), None)
+            sample_data = sample_df.to_dict('records')
+        else:
+            sample_data = []
+        
+        # Get dataframe statistics
+        dataframe_stats = get_selllist_stats()
+        
+        total_processing_time = time.time() - start_time
+        
+        # Final memory check
+        memory_final = process.memory_info().rss / 1024 / 1024  # MB
+        logger.info(f"Total request completed in {total_processing_time:.2f}s")
+        
+        response_data = {
+            "status": "success",
+            "message": f"Successfully processed {file_ext.upper()} file: {file.filename}",
+            "original_records": f"{original_count:,}",
+            "filtered_records": f"{filtered_count:,}",
+            "records_removed": f"{original_count - filtered_count:,}",
+            "processing_time": round(total_processing_time, 2),
+            "process_time": round(process_time, 2),
+            "sample_records": sample_data,
+            "columns": list(CSV_COLUMN_MAPPING.values()),
+            "dataframe_stats": dataframe_stats,
+            "debug_info": {
+                "memory_before_mb": round(memory_before, 1),
+                "memory_after_mb": round(memory_after, 1),
+                "memory_increase_mb": round(memory_after - memory_before, 1),
+                "file_size_bytes": len(file_content),
+                "filename": file.filename,
+                "file_type": file_ext.upper()
+            }
+        }
+        
+        # Clean all data for JSON serialization
+        return clean_for_json(response_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        processing_time = time.time() - start_time
+        logger.error(f"Unexpected error processing selllist: {e}")
+        return {
+            "status": "error",
+            "message": f"Error processing selllist: {str(e)}",
+            "original_records": "0",
+            "filtered_records": "0",
+            "processing_time": round(processing_time, 2)
+        }
+
+
+@app.get("/api/selllist/stats")
+async def get_selllist_stats_endpoint():
+    """Get statistics about the current selllist dataframe."""
+    try:
+        stats = get_selllist_stats()
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error getting selllist stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
+
+
+@app.get("/api/selllist/sample")
+async def get_selllist_sample_endpoint(records: int = 5):
+    """Get a sample of records from the selllist dataframe."""
+    try:
+        if records < 1 or records > 100:
+            raise HTTPException(status_code=400, detail="Number of records must be between 1 and 100")
+        
+        result = get_selllist_sample(records)
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error getting selllist sample: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting sample: {str(e)}")
+
+
+@app.delete("/api/selllist/clear")
+async def clear_selllist_endpoint():
+    """Clear the selllist dataframe."""
+    try:
+        clear_selllist_dataframe()
+        return {
+            "status": "success", 
+            "message": "Selllist dataframe cleared successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error clearing selllist: {e}")
+        raise HTTPException(status_code=500, detail=f"Error clearing selllist: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ import {
   Home as HomeIcon,
   AccountTree as GraphIcon,
   CloudUpload as BuylistIcon,
+  FileUpload as SelllistIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -39,6 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Home', icon: <HomeIcon />, path: '/' },
     { text: 'Graph', icon: <GraphIcon />, path: '/graph' },
     { text: 'CK Buylist', icon: <BuylistIcon />, path: '/buylist' },
+    { text: 'Vendor Selllist', icon: <SelllistIcon />, path: '/selllist' },
   ];
 
   const handleDrawerToggle = () => {
