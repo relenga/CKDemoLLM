@@ -82,7 +82,9 @@ The goal is to provide accurate, explainable, and fast part matching across larg
    
    - Normalize case and punctuation.
    - Create a new `composite` column combining multiple descriptive fields.
+   - Use actual DataFrame column names from BuyList and SellList datasets.
    - Example composite: `"saruman of many colors the lord of the rings m foil:false"`
+   - Pricing excluded from matching initially (placeholder for future enhancement)
 
 3. **Vectorization:**
    
@@ -178,6 +180,12 @@ matcher/
 5. **Semantic Embeddings** – Replace TF-IDF with transformer-based embeddings.
 
 ---
+
+### Design Decisions
+
+- **Field Names**: Use actual DataFrame column names from loaded BuyList and SellList datasets
+- **Pricing in Matching**: Excluded initially, placeholder added for future enhancement
+- **Composite Field Strategy**: Combine name, set, rarity, foil fields (no pricing for now)
 
 ### Open Questions
 

@@ -58,6 +58,16 @@ from fileUpload_core import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Import Part Matching Engine
+try:
+    from matcher import PartMatcher
+    MATCHER_AVAILABLE = True
+    logger.info("Part Matching Engine loaded successfully")
+except ImportError as e:
+    logger.warning(f"Part Matching Engine not available: {e}")
+    PartMatcher = None
+    MATCHER_AVAILABLE = False
+
 # Create the app
 app = FastAPI(
     title="CK LangGraph Backend API",
@@ -430,6 +440,189 @@ async def clear_selllist_endpoint():
     except Exception as e:
         logger.error(f"Error clearing selllist: {e}")
         raise HTTPException(status_code=500, detail=f"Error clearing selllist: {str(e)}")
+
+
+# ================================
+# PART MATCHING ENGINE ENDPOINTS
+# ================================
+
+@app.post("/api/matcher/find_matches")
+async def find_matches_endpoint(
+    similarity_threshold: float = 0.2,
+    max_matches_per_item: int = 5,
+    return_stats: bool = True
+):
+    """
+    Find matches between SellList and BuyList using TF-IDF similarity matching.
+    
+    Args:
+        similarity_threshold: Minimum cosine similarity for valid matches (0.0-1.0)
+        max_matches_per_item: Maximum matches to return per SellList item
+        return_stats: Whether to include match statistics in response
+    
+    Returns:
+        JSON response with match results and optionally statistics
+    """
+    try:
+        # Get current DataFrames
+        buylist_df = get_buylist_dataframe()
+        selllist_df = get_selllist_dataframe()
+        
+        if buylist_df is None or len(buylist_df) == 0:
+            raise HTTPException(
+                status_code=400, 
+                detail="No BuyList data loaded. Please upload BuyList data first."
+            )
+        
+        if selllist_df is None or len(selllist_df) == 0:
+            raise HTTPException(
+                status_code=400, 
+                detail="No SellList data loaded. Please upload SellList data first."
+            )
+        
+        # Validate parameters
+        if not 0.0 <= similarity_threshold <= 1.0:
+            raise HTTPException(
+                status_code=400,
+                detail="similarity_threshold must be between 0.0 and 1.0"
+            )
+        
+        if max_matches_per_item < 1:
+            raise HTTPException(
+                status_code=400,
+                detail="max_matches_per_item must be at least 1"
+            )
+        
+        logger.info(f"🎯 Starting Part Matching: {len(selllist_df)} SellList vs {len(buylist_df)} BuyList items")
+        
+        # Initialize Part Matcher
+        matcher = PartMatcher(
+            similarity_threshold=similarity_threshold,
+            max_matches_per_item=max_matches_per_item
+        )
+        
+        # Find matches
+        matches_df = matcher.find_matches(
+            buylist_df=buylist_df,
+            selllist_df=selllist_df,
+            return_stats=return_stats
+        )
+        
+        # Prepare response
+        response = {
+            "status": "success",
+            "message": f"Part matching completed successfully",
+            "data": {
+                "total_matches": len(matches_df),
+                "matches": clean_for_json(matches_df.to_dict('records')) if len(matches_df) > 0 else []
+            }
+        }
+        
+        # Add statistics if requested
+        if return_stats:
+            match_stats = matcher.get_match_summary()
+            response["data"]["statistics"] = clean_for_json(match_stats)
+        
+        logger.info(f"✅ Part matching complete: {len(matches_df)} matches found")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in part matching: {e}")
+        raise HTTPException(status_code=500, detail=f"Error in part matching: {str(e)}")
+
+
+@app.get("/api/matcher/status")
+async def matcher_status_endpoint():
+    """Get the current status of available data for matching."""
+    try:
+        buylist_df = get_buylist_dataframe()
+        selllist_df = get_selllist_dataframe()
+        
+        buylist_ready = buylist_df is not None and len(buylist_df) > 0
+        selllist_ready = selllist_df is not None and len(selllist_df) > 0
+        
+        return {
+            "status": "success",
+            "data": {
+                "buylist_loaded": buylist_ready,
+                "selllist_loaded": selllist_ready,
+                "buylist_count": len(buylist_df) if buylist_df is not None else 0,
+                "selllist_count": len(selllist_df) if selllist_df is not None else 0,
+                "ready_for_matching": buylist_ready and selllist_ready,
+                "estimated_processing_time": "< 2 minutes" if buylist_ready and selllist_ready else "N/A"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting matcher status: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting matcher status: {str(e)}")
+
+
+@app.post("/api/matcher/preview")
+async def matcher_preview_endpoint(sample_size: int = 10):
+    """
+    Get a preview of how the composite matching fields will look.
+    
+    Args:
+        sample_size: Number of sample records to return from each dataset
+    """
+    try:
+        # Get current DataFrames
+        buylist_df = get_buylist_dataframe()
+        selllist_df = get_selllist_dataframe()
+        
+        if buylist_df is None or selllist_df is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Both BuyList and SellList data must be loaded for preview"
+            )
+        
+        # Import preprocessing functions
+        from matcher.preprocess import preprocess_dataframe
+        
+        # Process small samples
+        buylist_sample = buylist_df.head(sample_size)
+        selllist_sample = selllist_df.head(sample_size)
+        
+        buylist_processed = preprocess_dataframe(buylist_sample, 'buylist')
+        selllist_processed = preprocess_dataframe(selllist_sample, 'selllist')
+        
+        # Prepare preview data
+        buylist_preview = []
+        for idx, row in buylist_processed.iterrows():
+            buylist_preview.append({
+                "original_name": row.get('BuyCardName', ''),
+                "original_edition": row.get('BuyEdition', ''),
+                "original_rarity": row.get('BuyRarity', ''),
+                "original_foil": row.get('BuyFoil', ''),
+                "composite_match_text": row.get('composite_match_text', '')
+            })
+        
+        selllist_preview = []
+        for idx, row in selllist_processed.iterrows():
+            selllist_preview.append({
+                "original_name": row.get('SellProductName', ''),
+                "original_set": row.get('SellSetName', ''),
+                "original_rarity": row.get('SellRarity', ''),
+                "composite_match_text": row.get('composite_match_text', '')
+            })
+        
+        return {
+            "status": "success",
+            "data": {
+                "buylist_preview": buylist_preview,
+                "selllist_preview": selllist_preview,
+                "sample_size": sample_size
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating matcher preview: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating matcher preview: {str(e)}")
 
 
 if __name__ == "__main__":

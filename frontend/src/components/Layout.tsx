@@ -22,6 +22,7 @@ import {
   AccountTree as GraphIcon,
   CloudUpload as BuylistIcon,
   FileUpload as SelllistIcon,
+  CompareArrows as MatchingIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -41,6 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Graph', icon: <GraphIcon />, path: '/graph' },
     { text: 'CK Buylist', icon: <BuylistIcon />, path: '/buylist' },
     { text: 'Vendor Selllist', icon: <SelllistIcon />, path: '/selllist' },
+    { text: 'Part Matching', icon: <MatchingIcon />, path: '/matching' },
   ];
 
   const handleDrawerToggle = () => {

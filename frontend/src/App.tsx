@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import GraphPage from './pages/GraphPage';
 import BuylistPage from './pages/BuylistPage';
 import SelllistPage from './pages/SelllistPage';
+import MatchingPage from './pages/MatchingPage';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/graph" element={<GraphPage />} />
           <Route path="/buylist" element={<BuylistPage />} />
           <Route path="/selllist" element={<SelllistPage />} />
+          <Route path="/matching" element={<MatchingPage />} />
         </Routes>
       </Layout>
     </Box>
