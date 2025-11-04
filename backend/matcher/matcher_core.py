@@ -25,7 +25,8 @@ class PartMatcher:
     def __init__(self, 
                  similarity_threshold: float = 0.2,
                  max_matches_per_item: int = 5,
-                 vectorizer_params: Optional[Dict] = None):
+                 vectorizer_params: Optional[Dict] = None,
+                 feature_config: Optional[Dict] = None):
         """
         Initialize the Part Matching Engine.
         
@@ -33,9 +34,11 @@ class PartMatcher:
             similarity_threshold: Minimum cosine similarity for valid matches
             max_matches_per_item: Maximum matches to return per SellList item
             vectorizer_params: Custom parameters for TF-IDF vectorizer
+            feature_config: Configuration for feature selection in preprocessing
         """
         self.similarity_threshold = similarity_threshold
         self.max_matches_per_item = max_matches_per_item
+        self.feature_config = feature_config
         
         # Initialize vectorizer with custom or default parameters
         if vectorizer_params is None:
@@ -73,9 +76,9 @@ class PartMatcher:
         """
         logger.info("🔄 Processing datasets for matching...")
         
-        # Preprocess datasets
-        self.buylist_processed = preprocess_dataframe(buylist_df, 'buylist')
-        self.selllist_processed = preprocess_dataframe(selllist_df, 'selllist')
+        # Preprocess datasets with feature configuration
+        self.buylist_processed = preprocess_dataframe(buylist_df, 'buylist', self.feature_config)
+        self.selllist_processed = preprocess_dataframe(selllist_df, 'selllist', self.feature_config)
         
         logger.info(f"✅ Datasets processed: {len(self.buylist_processed)} BuyList, "
                    f"{len(self.selllist_processed)} SellList records")

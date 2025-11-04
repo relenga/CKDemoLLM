@@ -152,6 +152,7 @@ class TextVectorizer:
         logger.info(f"🔍 Extracting top {top_k} matches with min similarity {min_similarity}")
         
         matches = []
+        sellitem_counter = 1  # Sequential selllist item number
         
         for sell_idx in range(len(selllist_df)):
             # Get similarities for this SellList item
@@ -165,7 +166,7 @@ class TextVectorizer:
                 top_indices = valid_indices[np.argsort(sell_similarities[valid_indices])][::-1][:top_k]
                 
                 # Create match records
-                for rank, buy_idx in enumerate(top_indices, 1):
+                for match_rank, buy_idx in enumerate(top_indices, 1):
                     similarity_score = sell_similarities[buy_idx]
                     
                     # Get original data
@@ -176,7 +177,7 @@ class TextVectorizer:
                         'sell_index': sell_idx,
                         'buy_index': buy_idx,
                         'similarity_score': float(similarity_score),
-                        'match_rank': rank,
+                        'match_rank': f"{sellitem_counter}-{match_rank}",
                         
                         # SellList fields
                         'sell_tcgplayer_id': sell_record.get('TCGplayerId', ''),
@@ -194,9 +195,13 @@ class TextVectorizer:
                         'buy_foil': buy_record.get('BuyFoil', False),
                         'buy_price': buy_record.get('BuyPrice', 0),
                         'buy_quantity': buy_record.get('BuyQty', 0),
+                        'buy_image': buy_record.get('BuyImage', ''),
                     }
                     
                     matches.append(match_record)
+                
+                # Increment sellitem counter after processing each selllist item with matches
+                sellitem_counter += 1
         
         matches_df = pd.DataFrame(matches)
         

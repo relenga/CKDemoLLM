@@ -64,11 +64,34 @@ def clean_jsonp_wrapper(raw_data: str) -> str:
 
 
 def transform_record(record: Dict[str, Any]) -> Dict[str, Any]:
-    """Transform a single record using the column mapping."""
+    """Transform a single record using the column mapping with proper type conversion."""
     transformed_record = {}
     for old_key, new_key in COLUMN_MAPPING.items():
         if old_key in record:
-            transformed_record[new_key] = record[old_key]
+            value = record[old_key]
+            
+            # Convert numeric fields to proper types
+            if new_key in ['BuyPrice', 'BuyQty', 'BuyProductId']:
+                try:
+                    if new_key == 'BuyProductId':
+                        # Product ID should be an integer
+                        transformed_record[new_key] = int(value) if value != '' else None
+                    else:
+                        # Price and Quantity should be floats
+                        transformed_record[new_key] = float(value) if value != '' else 0.0
+                except (ValueError, TypeError):
+                    # If conversion fails, set appropriate default
+                    if new_key == 'BuyProductId':
+                        transformed_record[new_key] = None
+                    else:
+                        transformed_record[new_key] = 0.0
+            elif new_key == 'BuyFoil':
+                # Convert foil status to boolean
+                transformed_record[new_key] = str(value).lower() == 'true'
+            else:
+                # Keep strings as-is
+                transformed_record[new_key] = value
+                
     return transformed_record
 
 
@@ -158,6 +181,17 @@ def process_buylist_data(raw_jsonp: str, save_to_dataframe: bool = True) -> tupl
     # Save to dataframe if requested
     if save_to_dataframe and transformed_records:
         _buylist_dataframe = pd.DataFrame(transformed_records)
+        
+        # Ensure proper data types after DataFrame creation
+        try:
+            _buylist_dataframe['BuyPrice'] = pd.to_numeric(_buylist_dataframe['BuyPrice'], errors='coerce').fillna(0.0)
+            _buylist_dataframe['BuyQty'] = pd.to_numeric(_buylist_dataframe['BuyQty'], errors='coerce').fillna(0.0)
+            _buylist_dataframe['BuyProductId'] = pd.to_numeric(_buylist_dataframe['BuyProductId'], errors='coerce').fillna(0).astype(int)
+            _buylist_dataframe['BuyFoil'] = _buylist_dataframe['BuyFoil'].astype(bool)
+            logger.info("✅ Applied proper data types to DataFrame")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not apply all data types: {e}")
+        
         logger.info(f"💾 Saved {len(transformed_records)} records to buylist dataframe")
         
         # Log dataframe info

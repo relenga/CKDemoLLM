@@ -34,18 +34,28 @@ def normalize_text(text: str) -> str:
     return text.strip()
 
 
-def create_composite_field(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
+def create_composite_field(df: pd.DataFrame, dataset_type: str, feature_config: Optional[Dict] = None) -> pd.DataFrame:
     """
     Create a composite text field combining key matching attributes.
     
     Args:
         df: Input DataFrame (BuyList or SellList)
         dataset_type: Either 'buylist' or 'selllist' to determine column names
+        feature_config: Optional dict to control which features to include
         
     Returns:
         DataFrame with added 'composite_match_text' column
     """
     df_copy = df.copy()
+    
+    # Default feature configuration if not provided
+    if feature_config is None:
+        feature_config = {
+            'use_card_names': True,
+            'use_set_names': True,
+            'use_rarity': True,
+            'use_foil_status': True
+        }
     
     if dataset_type.lower() == 'buylist':
         # BuyList column names from COLUMN_MAPPING
@@ -67,33 +77,34 @@ def create_composite_field(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
     else:
         raise ValueError(f"dataset_type must be 'buylist' or 'selllist', got: {dataset_type}")
     
-    # Build composite text components
+    # Build composite text components based on feature configuration
     components = []
     
-    # Add normalized card name
-    if name_col in df_copy.columns:
+    # Add normalized card name (if enabled)
+    if feature_config.get('use_card_names', True) and name_col in df_copy.columns:
         normalized_names = df_copy[name_col].apply(normalize_text)
         components.append(normalized_names)
     
-    # Add normalized edition/set
-    if edition_col in df_copy.columns:
+    # Add normalized edition/set (if enabled)
+    if feature_config.get('use_set_names', True) and edition_col in df_copy.columns:
         normalized_editions = df_copy[edition_col].apply(normalize_text)
         components.append(normalized_editions)
     
-    # Add normalized rarity
-    if rarity_col in df_copy.columns:
+    # Add normalized rarity (if enabled)
+    if feature_config.get('use_rarity', True) and rarity_col in df_copy.columns:
         normalized_rarity = df_copy[rarity_col].apply(normalize_text)
         components.append(normalized_rarity)
     
-    # Handle foil information
-    if foil_col and foil_col in df_copy.columns:
-        # For BuyList: explicit foil field
-        foil_text = df_copy[foil_col].apply(lambda x: 'foil' if x else 'nonfoil')
-        components.append(foil_text)
-    elif dataset_type.lower() == 'selllist':
-        # For SellList: try to extract foil from product name
-        foil_indicators = df_copy[name_col].apply(detect_foil_from_name)
-        components.append(foil_indicators)
+    # Handle foil information (if enabled)
+    if feature_config.get('use_foil_status', True):
+        if foil_col and foil_col in df_copy.columns:
+            # For BuyList: explicit foil field
+            foil_text = df_copy[foil_col].apply(lambda x: 'foil' if x else 'nonfoil')
+            components.append(foil_text)
+        elif dataset_type.lower() == 'selllist':
+            # For SellList: try to extract foil from product name
+            foil_indicators = df_copy[name_col].apply(detect_foil_from_name)
+            components.append(foil_indicators)
     
     # Placeholder for future pricing inclusion
     # if include_pricing:
@@ -135,21 +146,22 @@ def detect_foil_from_name(product_name: str) -> str:
     return 'nonfoil'
 
 
-def preprocess_dataframe(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
+def preprocess_dataframe(df: pd.DataFrame, dataset_type: str, feature_config: Optional[Dict] = None) -> pd.DataFrame:
     """
     Complete preprocessing pipeline for a dataset.
     
     Args:
         df: Raw DataFrame 
         dataset_type: 'buylist' or 'selllist'
+        feature_config: Optional dict to control which features to include
         
     Returns:
         Preprocessed DataFrame ready for vectorization
     """
     logger.info(f"🔄 Starting preprocessing for {dataset_type} with {len(df)} records")
     
-    # Add composite matching field
-    processed_df = create_composite_field(df, dataset_type)
+    # Add composite matching field with feature selection
+    processed_df = create_composite_field(df, dataset_type, feature_config)
     
     # Log sample composite fields for validation
     if len(processed_df) > 0:

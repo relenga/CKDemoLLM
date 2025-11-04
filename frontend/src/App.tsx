@@ -7,6 +7,7 @@ import GraphPage from './pages/GraphPage';
 import BuylistPage from './pages/BuylistPage';
 import SelllistPage from './pages/SelllistPage';
 import MatchingPage from './pages/MatchingPage';
+import ConflictManagementPage from './pages/ConflictManagementPage';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/buylist" element={<BuylistPage />} />
           <Route path="/selllist" element={<SelllistPage />} />
           <Route path="/matching" element={<MatchingPage />} />
+          <Route path="/conflicts" element={<ConflictManagementPage />} />
         </Routes>
       </Layout>
     </Box>

@@ -23,6 +23,7 @@ import {
   CloudUpload as BuylistIcon,
   FileUpload as SelllistIcon,
   CompareArrows as MatchingIcon,
+  Warning as ConflictIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -43,6 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'CK Buylist', icon: <BuylistIcon />, path: '/buylist' },
     { text: 'Vendor Selllist', icon: <SelllistIcon />, path: '/selllist' },
     { text: 'Part Matching', icon: <MatchingIcon />, path: '/matching' },
+    { text: 'Conflict Management', icon: <ConflictIcon />, path: '/conflicts' },
   ];
 
   const handleDrawerToggle = () => {
